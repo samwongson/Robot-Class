@@ -5,8 +5,10 @@ class InvalidTargetError < StandardError
 end
 
 class Robot
+  MAX_SHIELD = 50
 
-  attr_reader :position, :items, :health, :max_health
+  @@all_bots = []
+  attr_reader :position, :items, :health, :max_health, :shield
   attr_accessor :equipped_weapon
 
   def initialize
@@ -15,7 +17,41 @@ class Robot
     @health = 100
     @max_health = 100
     @equipped_weapon = nil
+    @shield = 50
   end
+
+  def self.list
+    @@all_bots
+  end 
+
+  def self.all_locations
+    @@all_bots.collect {|robot| robot.position}
+  end
+
+  def self.in_position(x, y)
+    @@all_bots.select {|robot| robot.position == [x,y]}
+  end
+
+
+  def scan
+    x = position[0]
+    y = position[1]
+    hits = []
+    hits << Robot.in_position(x+1, y) #square to the right
+    hits << Robot.in_position(x-1, y) #square to the left
+    hits << Robot.in_position(x, y+1) #square above
+    hits << Robot.in_position(x, y-1)
+    hits #square below
+
+  end
+
+  def self.create
+    bot = Robot.new
+    @@all_bots << bot
+    bot
+
+  end
+
 
   def move_left
     @position[0] -= 1
@@ -54,10 +90,14 @@ class Robot
   end
 
   def wound(damage)
-    if damage > @health
+    
+    if damage > (@health + @shield)
       @health -= @health
-    else
-      @health -= damage
+    elsif damage > @shield
+      @health -= (@shield - damage).abs
+      @shield = 0
+    elsif damage < @shield
+      @shield -= damage
     end
   end
 
@@ -104,6 +144,10 @@ class Robot
 
   def in_range?(target)
     target.position[0].abs - self.position[0].abs <= @equipped_weapon.range && target.position[1].abs - self.position[1].abs <= @equipped_weapon.range
+  end
+
+  def eat_battery
+    @shield = 50
   end
 
 
